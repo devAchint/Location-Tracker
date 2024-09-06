@@ -1,5 +1,6 @@
 package com.achint.locationtracker.utils
 
+import android.graphics.Color
 import androidx.datastore.preferences.core.doublePreferencesKey
 
 object Constants {
@@ -18,5 +19,11 @@ object Constants {
 
     const val ACTION_START_TRACKING = "ACTION_START_TRACKING"
     const val ACTION_STOP_TRACKING = "ACTION_STOP_TRACKING"
+
+    const val POLYLINE_WIDTH = 5f
+    const val POLYLINE_COLOR = Color.RED
+    const val GEOFENCE_FILL_COLOR = 0x5500FF00
+    const val GEOFENCE_STROKE_COLOR = Color.GREEN
+
 
 }

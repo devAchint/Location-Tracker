@@ -2,11 +2,10 @@ package com.achint.locationtracker
 
 import android.annotation.SuppressLint
 import android.content.Intent
-import android.graphics.Color
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
@@ -14,11 +13,16 @@ import com.achint.locationtracker.databinding.ActivityMainBinding
 import com.achint.locationtracker.service.TrackingService
 import com.achint.locationtracker.utils.Constants.ACTION_START_TRACKING
 import com.achint.locationtracker.utils.Constants.ACTION_STOP_TRACKING
+import com.achint.locationtracker.utils.Constants.GEOFENCE_FILL_COLOR
+import com.achint.locationtracker.utils.Constants.GEOFENCE_STROKE_COLOR
 import com.achint.locationtracker.utils.Constants.GEOFENCING_RADIUS
+import com.achint.locationtracker.utils.Constants.POLYLINE_COLOR
+import com.achint.locationtracker.utils.Constants.POLYLINE_WIDTH
 import com.achint.locationtracker.utils.PermissionManager
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CircleOptions
@@ -29,12 +33,12 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 @SuppressLint("MissingPermission")
-class MainActivity : AppCompatActivity(), OnMapReadyCallback {
+class MainActivity : AppCompatActivity() {
 
     private var myMap: GoogleMap? = null
-    private val viewModel: MainViewModel by viewModels()
     private var pathPoints = mutableListOf<LatLng>()
-    private var objectLocation:LatLng?=null
+    private var objectLocation: LatLng? = null
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
 
     private val locationPermissionLauncher =
@@ -42,20 +46,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
             if (!permissions.containsValue(false)) {
-                if (PermissionManager.hasBackgroundPermissions(this))
-                else
-                    backgroundPermissionLauncher.launch(PermissionManager.background)
+                loadMap()
             } else {
                 val anyRationaleNeeded = PermissionManager.locationPermissions.any { permission ->
                     ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
                 }
                 if (anyRationaleNeeded) {
-                    Toast.makeText(this, "rationale", Toast.LENGTH_SHORT).show()
+                    showRationale(false, false)
                 } else {
-                    Toast.makeText(this, " no rationale", Toast.LENGTH_SHORT).show()
+                    showRationale(true, false)
                 }
             }
         }
+
 
     private val backgroundPermissionLauncher =
         registerForActivityResult(
@@ -65,12 +68,12 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
             } else if (ActivityCompat.shouldShowRequestPermissionRationale(
                     this,
-                    PermissionManager.background
+                    PermissionManager.backgroundLocationPermissions
                 )
             ) {
-
+                showRationale(false, true)
             } else {
-
+                showRationale(true, true)
             }
         }
     private lateinit var binding: ActivityMainBinding
@@ -78,27 +81,43 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        checkLocationPermissions()
+        setOnClickListeners()
+        trackingObservers()
+    }
 
+    private fun loadMap() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
         mapFragment?.getMapAsync {
-            onMapReady(it)
+            myMap = it
+            myMap?.isMyLocationEnabled = true
+            myMap?.uiSettings?.isMyLocationButtonEnabled = true
             addAllLines()
             objectLocation?.let {
                 addCircle(it)
             }
 
         }
-        checkPermission()
+    }
 
+    private fun setOnClickListeners() {
         binding.startTracking.setOnClickListener {
-            if (!isTracking) {
-                updateTrackingService(ACTION_START_TRACKING)
+            if (PermissionManager.hasLocationPermissions(this)) {
+                if (PermissionManager.hasBackgroundPermissions(this)) {
+                    if (!isTracking) {
+                        updateTrackingService(ACTION_START_TRACKING)
+                    } else {
+                        updateTrackingService(ACTION_STOP_TRACKING)
+                    }
+                } else {
+                    backgroundPermissionLauncher.launch(PermissionManager.backgroundLocationPermissions)
+                }
             } else {
-                updateTrackingService(ACTION_STOP_TRACKING)
+                locationPermissionLauncher.launch(PermissionManager.locationPermissions)
             }
         }
-        trackingObservers()
     }
 
     private fun trackingObservers() {
@@ -106,28 +125,39 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
             isTracking = it
             if (it) {
                 binding.startTracking.text = "Stop Tracking"
-                viewModel.getObjectLocation()
             } else {
                 binding.startTracking.text = "Start Tracking"
             }
         }
 
         TrackingService.objectLocation.observe(this) {
-            objectLocation=it
-            addCircle(it)
+            objectLocation = it
+            it?.let {
+                addCircle(it)
+            } ?: kotlin.run {
+                myMap?.clear()
+            }
         }
 
         TrackingService.pathPoints.observe(this) {
             this.pathPoints = it
             updatePolyLine()
+            moveToCamera()
+        }
+        fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
+            location?.let {
+                val latLng = LatLng(it.latitude, it.longitude)
+                myMap?.moveCamera(CameraUpdateFactory.newLatLng(latLng))
+                myMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+            }
         }
 
     }
 
     private fun addAllLines() {
         val polylineOptions = PolylineOptions()
-            .color(Color.RED)
-            .width(2f)
+            .color(POLYLINE_COLOR)
+            .width(POLYLINE_WIDTH)
             .addAll(pathPoints)
         myMap?.addPolyline(polylineOptions)
     }
@@ -139,55 +169,81 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback {
         }
     }
 
+    private fun moveToCamera() {
+        if (pathPoints.isNotEmpty() && pathPoints.size > 1) {
+            myMap?.moveCamera(CameraUpdateFactory.newLatLng(pathPoints.last()))
+            myMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(pathPoints.last(), 16f))
+        }
+    }
+
     private fun updatePolyLine() {
         if (pathPoints.isNotEmpty() && pathPoints.size > 1) {
             val preLastLatLng = pathPoints[pathPoints.size - 2]
             val lastLatLng = pathPoints.last()
             val polylineOptions = PolylineOptions()
-                .color(Color.RED)
-                .width(2f)
+                .color(POLYLINE_COLOR)
+                .width(POLYLINE_WIDTH)
                 .add(preLastLatLng)
                 .add(lastLatLng)
             myMap?.addPolyline(polylineOptions)
         }
     }
 
-    override fun onMapReady(googleMap: GoogleMap) {
-        myMap = googleMap
-        myMap?.isMyLocationEnabled = true
-        myMap?.uiSettings?.isMyLocationButtonEnabled = true
-    }
 
-
-    private fun checkPermission() {
-        if (!PermissionManager.hasLocationPermissions(this)) {
+    private fun checkLocationPermissions() {
+        if (PermissionManager.hasLocationPermissions(this).not()) {
             locationPermissionLauncher.launch(PermissionManager.locationPermissions)
         } else {
-            if (PermissionManager.hasBackgroundPermissions(this))
-            else
-                backgroundPermissionLauncher.launch(PermissionManager.background)
+            loadMap()
         }
     }
 
 
     private fun addCircle(latLng: LatLng) {
-        Toast.makeText(this, "circle", Toast.LENGTH_SHORT).show()
-        val marker = MarkerOptions().position(latLng).title("My location").icon(
+        val marker = MarkerOptions().position(latLng).title("Object location").icon(
             BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
         )
         val circle = CircleOptions()
             .center(latLng)
             .radius(GEOFENCING_RADIUS.toDouble())
-            .fillColor(0x5500FF00)
-            .strokeColor(Color.GREEN)
+            .fillColor(GEOFENCE_FILL_COLOR)
+            .strokeColor(GEOFENCE_STROKE_COLOR)
         myMap?.let {
             it.addMarker(marker)
             it.addCircle(circle)
             it.moveCamera(CameraUpdateFactory.newLatLng(latLng))
             it.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
-        } ?: kotlin.run {
-            Toast.makeText(this, "map became null", Toast.LENGTH_SHORT).show()
         }
     }
+
+    private fun showRationale(isSetting: Boolean, isBackgroundPermission: Boolean) {
+        val positiveButton = if (isSetting) "Settings" else "Ok"
+        AlertDialog.Builder(this)
+            .setTitle("Permission Required")
+            .setMessage("This app needs location permission to fetch current location.Please give access to all time location permission ")
+            .setPositiveButton(positiveButton) { _, _ ->
+                if (isSetting.not()) {
+                    if (isBackgroundPermission) {
+                        backgroundPermissionLauncher.launch(PermissionManager.backgroundLocationPermissions)
+                    } else {
+                        locationPermissionLauncher.launch(PermissionManager.locationPermissions)
+                    }
+                } else {
+                    val intent =
+                        Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                    intent.data = android.net.Uri.parse("package:$packageName")
+                    startActivity(intent)
+                }
+            }.setNegativeButton("Cancel") { dialog, _ ->
+                dialog.dismiss()
+            }.show()
+    }
+
+
+    override fun onRestart() {
+        super.onRestart()
+        checkLocationPermissions()
+    }
+
 
 }

@@ -4,9 +4,11 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.core.app.ActivityCompat
 
 object PermissionManager {
+
     val locationPermissions = mutableListOf(
         Manifest.permission.ACCESS_FINE_LOCATION,
         Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -17,7 +19,8 @@ object PermissionManager {
 
     }.toTypedArray()
 
-    val background = Manifest.permission.ACCESS_BACKGROUND_LOCATION
+
+    val backgroundLocationPermissions = Manifest.permission.ACCESS_BACKGROUND_LOCATION
 
     fun hasLocationPermissions(context: Context): Boolean {
         for (permission in locationPermissions) {
@@ -33,14 +36,15 @@ object PermissionManager {
     }
 
     fun hasBackgroundPermissions(context: Context): Boolean {
-        if (ActivityCompat.checkSelfPermission(
-                context,
-                background
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return false
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (ActivityCompat.checkSelfPermission(
+                    context,
+                    backgroundLocationPermissions
+                ) != PackageManager.PERMISSION_GRANTED
+            ) {
+                return false
+            }
         }
-
         return true
     }
 }

@@ -17,6 +17,8 @@ object PermissionManager {
 
     }.toTypedArray()
 
+    val background = Manifest.permission.ACCESS_BACKGROUND_LOCATION
+
     fun hasLocationPermissions(context: Context): Boolean {
         for (permission in locationPermissions) {
             if (ActivityCompat.checkSelfPermission(
@@ -27,6 +29,18 @@ object PermissionManager {
                 return false
             }
         }
+        return true
+    }
+
+    fun hasBackgroundPermissions(context: Context): Boolean {
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                background
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            return false
+        }
+
         return true
     }
 }

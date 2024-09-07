@@ -1,4 +1,4 @@
-package com.achint.locationtracker
+package com.achint.locationtracker.broadcast
 
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -8,6 +8,8 @@ import android.content.Intent
 import android.media.MediaPlayer
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.MutableLiveData
+import com.achint.locationtracker.ui.MainActivity
+import com.achint.locationtracker.R
 import com.achint.locationtracker.utils.Constants.ALERT_NOTIFICATION_ID
 import com.achint.locationtracker.utils.Constants.ALERT_NOTIFICATION_PENDING_INTENT_REQUEST_CODE
 import com.achint.locationtracker.utils.Constants.NOTIFICATION_CHANNEL_ID

@@ -5,7 +5,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory
 
 object Constants {
     const val GEOFENCE_REQUEST_ID = "GEOFENCE_ID"
-    const val GEOFENCING_RADIUS = 10F
+    const val GEOFENCING_RADIUS = 2000F
 
     const val NOTIFICATION_CHANNEL_ID = "TRACKING_CHANNEL"
     const val NOTIFICATION_CHANNEL_NAME = "TRACKING"

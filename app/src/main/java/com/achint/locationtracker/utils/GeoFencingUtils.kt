@@ -3,7 +3,7 @@ package com.achint.locationtracker.utils
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import com.achint.locationtracker.GeoFencingReceiver
+import com.achint.locationtracker.broadcast.GeoFencingReceiver
 import com.achint.locationtracker.utils.Constants.GEOFENCE_REQUEST_ID
 import com.achint.locationtracker.utils.Constants.GEOFENCING_RADIUS
 import com.google.android.gms.location.Geofence

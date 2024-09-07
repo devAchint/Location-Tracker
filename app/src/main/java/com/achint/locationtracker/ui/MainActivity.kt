@@ -1,4 +1,4 @@
-package com.achint.locationtracker
+package com.achint.locationtracker.ui
 
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -9,6 +9,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.databinding.DataBindingUtil
+import com.achint.locationtracker.R
+import com.achint.locationtracker.broadcast.GeoFencingReceiver
 import com.achint.locationtracker.databinding.ActivityMainBinding
 import com.achint.locationtracker.service.TrackingService
 import com.achint.locationtracker.utils.Constants.ACTION_START_TRACKING
@@ -30,7 +32,6 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
 

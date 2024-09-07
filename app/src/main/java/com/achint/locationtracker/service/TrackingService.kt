@@ -9,7 +9,7 @@ import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.MutableLiveData
-import com.achint.locationtracker.MainActivity
+import com.achint.locationtracker.ui.MainActivity
 import com.achint.locationtracker.R
 import com.achint.locationtracker.utils.Constants.ACTION_START_TRACKING
 import com.achint.locationtracker.utils.Constants.ACTION_STOP_TRACKING

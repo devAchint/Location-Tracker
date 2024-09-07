@@ -3,6 +3,8 @@ package com.achint.locationtracker
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -35,19 +37,14 @@ import com.google.android.gms.maps.model.PolylineOptions
 
 @SuppressLint("MissingPermission")
 class MainActivity : AppCompatActivity() {
-
-    private var myMap: GoogleMap? = null
-    private var pathPoints = mutableListOf<LatLng>()
-    private var objectLocation: LatLng? = null
-    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
-
-
     private val locationPermissionLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
             if (!permissions.containsValue(false)) {
+                Toast.makeText(this, "lcation1", Toast.LENGTH_SHORT).show()
                 loadMap()
+
             } else {
                 val anyRationaleNeeded = PermissionManager.locationPermissions.any { permission ->
                     ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
@@ -77,6 +74,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+
+    private var myMap: GoogleMap? = null
+    private var pathPoints = mutableListOf<LatLng>()
+    private var objectLocation: LatLng? = null
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
     private lateinit var binding: ActivityMainBinding
     private var isTracking = false
 
@@ -129,6 +131,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 binding.startTracking.text = getString(R.string.start_tracking)
                 getLastLocation()
+                binding.alertLayout.visibility = View.GONE
             }
         }
 
@@ -145,6 +148,15 @@ class MainActivity : AppCompatActivity() {
             this.pathPoints = it
             updatePolyLine()
             moveToCamera()
+        }
+        GeoFencingReceiver.isObjectUnderRadius.observe(this) {
+            if (it) {
+                binding.alertLayout.visibility = View.VISIBLE
+                binding.alertText.text = "Hey! You have entered the radius"
+            } else {
+                binding.alertLayout.visibility = View.VISIBLE
+                binding.alertText.text = "Hey! You have left the radius"
+            }
         }
     }
 
@@ -177,12 +189,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun updatePolyLine() {
         if (pathPoints.isNotEmpty() && pathPoints.size > 1) {
-            val preLastLatLng = pathPoints[pathPoints.size - 2]
+            val secondLastLatLng = pathPoints[pathPoints.size - 2]
             val lastLatLng = pathPoints.last()
             val polylineOptions = PolylineOptions()
                 .color(POLYLINE_COLOR)
                 .width(POLYLINE_WIDTH)
-                .add(preLastLatLng)
+                .add(secondLastLatLng)
                 .add(lastLatLng)
             myMap?.addPolyline(polylineOptions)
         }
@@ -193,6 +205,7 @@ class MainActivity : AppCompatActivity() {
         if (PermissionManager.hasLocationPermissions(this).not()) {
             locationPermissionLauncher.launch(PermissionManager.locationPermissions)
         } else {
+            Toast.makeText(this, "location", Toast.LENGTH_SHORT).show()
             loadMap()
         }
     }
@@ -255,4 +268,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+    }
 }

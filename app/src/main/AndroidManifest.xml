@@ -32,7 +32,7 @@
             </intent-filter>
         </activity>
         <service android:name=".service.TrackingService"
-            android:foregroundServiceType="location"/>
+            android:foregroundServiceType="location" />
 
         <receiver android:name=".GeoFencingReceiver" />
 

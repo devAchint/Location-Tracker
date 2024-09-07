@@ -7,14 +7,19 @@ import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
 import androidx.core.app.NotificationCompat
+import androidx.lifecycle.MutableLiveData
 import com.achint.locationtracker.utils.Constants.ALERT_NOTIFICATION_ID
+import com.achint.locationtracker.utils.Constants.ALERT_NOTIFICATION_PENDING_INTENT_REQUEST_CODE
 import com.achint.locationtracker.utils.Constants.NOTIFICATION_CHANNEL_ID
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingEvent
 import timber.log.Timber
 
-class GeoFencingReceiver : BroadcastReceiver() {
+class GeoFencingReceiver() : BroadcastReceiver() {
+    companion object {
+        var isObjectUnderRadius = MutableLiveData<Boolean>()
+    }
 
     override fun onReceive(context: Context?, intent: Intent?) {
         intent?.let {
@@ -29,11 +34,13 @@ class GeoFencingReceiver : BroadcastReceiver() {
             when (geofenceTransition) {
                 Geofence.GEOFENCE_TRANSITION_ENTER -> {
                     showAlert(context!!, "You have entered the radius")
+                    isObjectUnderRadius.postValue(true)
                     Timber.d("Geo enter")
                 }
 
                 Geofence.GEOFENCE_TRANSITION_EXIT -> {
                     showAlert(context!!, "You have left the radius")
+                    isObjectUnderRadius.postValue(false)
                     Timber.d("Geo exit")
                 }
 
@@ -69,7 +76,7 @@ class GeoFencingReceiver : BroadcastReceiver() {
     private fun getPendingIntent(context: Context?) =
         PendingIntent.getActivity(
             context,
-            0,
+            ALERT_NOTIFICATION_PENDING_INTENT_REQUEST_CODE,
             Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

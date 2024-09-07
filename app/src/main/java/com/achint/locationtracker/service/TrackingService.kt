@@ -2,10 +2,13 @@ package com.achint.locationtracker.service
 
 import android.annotation.SuppressLint
 import android.app.Notification
+import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.os.Looper
+import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.MutableLiveData
@@ -13,8 +16,10 @@ import com.achint.locationtracker.MainActivity
 import com.achint.locationtracker.R
 import com.achint.locationtracker.utils.Constants.ACTION_START_TRACKING
 import com.achint.locationtracker.utils.Constants.ACTION_STOP_TRACKING
+import com.achint.locationtracker.utils.Constants.ALERT_NOTIFICATION_ID
 import com.achint.locationtracker.utils.Constants.NOTIFICATION_CHANNEL_ID
 import com.achint.locationtracker.utils.Constants.NOTIFICATION_ID
+import com.achint.locationtracker.utils.Constants.TRACKING_NOTIFICATION_PENDING_INTENT_REQUEST_CODE
 import com.achint.locationtracker.utils.GeoFencingUtils
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.GeofencingClient
@@ -131,9 +136,10 @@ class TrackingService : LifecycleService() {
             .setContentTitle("Tracking your location")
             .setContentText("Location tracking is active. Tap here for more information.")
             .setSmallIcon(R.drawable.ic_location)
+            .setAutoCancel(false)
+            .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(Notification.DEFAULT_ALL)
-            .setOngoing(true)
             .setContentIntent(getPendingIntent())
             .build()
 
@@ -143,7 +149,7 @@ class TrackingService : LifecycleService() {
     private fun getPendingIntent() =
         PendingIntent.getActivity(
             this,
-            0,
+            TRACKING_NOTIFICATION_PENDING_INTENT_REQUEST_CODE,
             Intent(this, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

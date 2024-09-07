@@ -6,7 +6,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.media.MediaPlayer
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.achint.locationtracker.utils.Constants.ALERT_NOTIFICATION_ID
 import com.achint.locationtracker.utils.Constants.NOTIFICATION_CHANNEL_ID
@@ -18,33 +17,31 @@ import timber.log.Timber
 class GeoFencingReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
-        Toast.makeText(context, "intent", Toast.LENGTH_SHORT).show()
-        Timber.d("Geo intent received $intent")
         intent?.let {
-
             val geofencingEvent = GeofencingEvent.fromIntent(it)
-            // geofencingEvent?.let { event ->
             if (geofencingEvent?.hasError() == true) {
                 val errorMessage = GeofenceStatusCodes
                     .getStatusCodeString(geofencingEvent.errorCode)
                 Timber.d("Geofence receiver $errorMessage")
                 return
             }
-            Timber.d("Geo event is $geofencingEvent")
             val geofenceTransition = geofencingEvent?.geofenceTransition
-            if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_ENTER) {
-                showAlert(context!!,"You have entered the radius")
-                Timber.d("Geo enter")
-            } else if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_EXIT) {
-                showAlert(context!!,  "You have left the radius")
-                Timber.d("Geo exit")
-            } else {
-                Timber.d("Geo $geofenceTransition")
-            }
-            //  }?:run {
-            // }
-        }
+            when (geofenceTransition) {
+                Geofence.GEOFENCE_TRANSITION_ENTER -> {
+                    showAlert(context!!, "You have entered the radius")
+                    Timber.d("Geo enter")
+                }
 
+                Geofence.GEOFENCE_TRANSITION_EXIT -> {
+                    showAlert(context!!, "You have left the radius")
+                    Timber.d("Geo exit")
+                }
+
+                else -> {
+                    Timber.d("Geo $geofenceTransition")
+                }
+            }
+        }
 
     }
 
@@ -53,11 +50,12 @@ class GeoFencingReceiver : BroadcastReceiver() {
         media.start()
     }
 
-    private fun showAlert(context: Context, description:String) {
+    private fun showAlert(context: Context, description: String) {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         playAudio(context)
         val notification = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentTitle("Tracking your location")
             .setContentText(description)
             .setSmallIcon(R.drawable.ic_location)

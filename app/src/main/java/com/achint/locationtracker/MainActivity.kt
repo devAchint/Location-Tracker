@@ -3,7 +3,6 @@ package com.achint.locationtracker
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -13,11 +12,14 @@ import com.achint.locationtracker.databinding.ActivityMainBinding
 import com.achint.locationtracker.service.TrackingService
 import com.achint.locationtracker.utils.Constants.ACTION_START_TRACKING
 import com.achint.locationtracker.utils.Constants.ACTION_STOP_TRACKING
+import com.achint.locationtracker.utils.Constants.CURRENT_ZOOM
 import com.achint.locationtracker.utils.Constants.GEOFENCE_FILL_COLOR
 import com.achint.locationtracker.utils.Constants.GEOFENCE_STROKE_COLOR
 import com.achint.locationtracker.utils.Constants.GEOFENCING_RADIUS
+import com.achint.locationtracker.utils.Constants.MARKER_COLOR
 import com.achint.locationtracker.utils.Constants.POLYLINE_COLOR
 import com.achint.locationtracker.utils.Constants.POLYLINE_WIDTH
+import com.achint.locationtracker.utils.Constants.TRACKING_ZOOM
 import com.achint.locationtracker.utils.PermissionManager
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
@@ -29,9 +31,8 @@ import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
-import dagger.hilt.android.AndroidEntryPoint
 
-@AndroidEntryPoint
+
 @SuppressLint("MissingPermission")
 class MainActivity : AppCompatActivity() {
 
@@ -52,9 +53,9 @@ class MainActivity : AppCompatActivity() {
                     ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
                 }
                 if (anyRationaleNeeded) {
-                    showRationale(false, false)
+                    showRationale(isSetting = false, isBackgroundPermission = false)
                 } else {
-                    showRationale(true, false)
+                    showRationale(isSetting = true, isBackgroundPermission = false)
                 }
             }
         }
@@ -64,16 +65,16 @@ class MainActivity : AppCompatActivity() {
         registerForActivityResult(
             ActivityResultContracts.RequestPermission()
         ) { isGranted: Boolean ->
-            if (isGranted) {
-
-            } else if (ActivityCompat.shouldShowRequestPermissionRationale(
-                    this,
-                    PermissionManager.backgroundLocationPermissions
-                )
-            ) {
-                showRationale(false, true)
-            } else {
-                showRationale(true, true)
+            if (!isGranted) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(
+                        this,
+                        PermissionManager.backgroundLocationPermissions
+                    )
+                ) {
+                    showRationale(isSetting = false, isBackgroundPermission = true)
+                } else {
+                    showRationale(isSetting = true, isBackgroundPermission = true)
+                }
             }
         }
     private lateinit var binding: ActivityMainBinding
@@ -90,15 +91,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadMap() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
-        mapFragment?.getMapAsync {
-            myMap = it
+        mapFragment?.getMapAsync { googleMap ->
+            myMap = googleMap
             myMap?.isMyLocationEnabled = true
             myMap?.uiSettings?.isMyLocationButtonEnabled = true
             addAllLines()
             objectLocation?.let {
                 addCircle(it)
             }
-
+            getLastLocation()
         }
     }
 
@@ -124,9 +125,10 @@ class MainActivity : AppCompatActivity() {
         TrackingService.isTracking.observe(this) {
             isTracking = it
             if (it) {
-                binding.startTracking.text = "Stop Tracking"
+                binding.startTracking.text = getString(R.string.stop_tracking)
             } else {
-                binding.startTracking.text = "Start Tracking"
+                binding.startTracking.text = getString(R.string.start_tracking)
+                getLastLocation()
             }
         }
 
@@ -144,14 +146,6 @@ class MainActivity : AppCompatActivity() {
             updatePolyLine()
             moveToCamera()
         }
-        fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
-            location?.let {
-                val latLng = LatLng(it.latitude, it.longitude)
-                myMap?.moveCamera(CameraUpdateFactory.newLatLng(latLng))
-                myMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
-            }
-        }
-
     }
 
     private fun addAllLines() {
@@ -172,7 +166,12 @@ class MainActivity : AppCompatActivity() {
     private fun moveToCamera() {
         if (pathPoints.isNotEmpty() && pathPoints.size > 1) {
             myMap?.moveCamera(CameraUpdateFactory.newLatLng(pathPoints.last()))
-            myMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(pathPoints.last(), 16f))
+            myMap?.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    pathPoints.last(),
+                    TRACKING_ZOOM
+                )
+            )
         }
     }
 
@@ -201,7 +200,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun addCircle(latLng: LatLng) {
         val marker = MarkerOptions().position(latLng).title("Object location").icon(
-            BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
+            BitmapDescriptorFactory.defaultMarker(MARKER_COLOR)
         )
         val circle = CircleOptions()
             .center(latLng)
@@ -209,10 +208,11 @@ class MainActivity : AppCompatActivity() {
             .fillColor(GEOFENCE_FILL_COLOR)
             .strokeColor(GEOFENCE_STROKE_COLOR)
         myMap?.let {
+            it.clear()
             it.addMarker(marker)
             it.addCircle(circle)
             it.moveCamera(CameraUpdateFactory.newLatLng(latLng))
-            it.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16f))
+            it.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, TRACKING_ZOOM))
         }
     }
 
@@ -245,5 +245,14 @@ class MainActivity : AppCompatActivity() {
         checkLocationPermissions()
     }
 
+    private fun getLastLocation() {
+        fusedLocationProviderClient.lastLocation.addOnSuccessListener { location ->
+            location?.let {
+                val latLng = LatLng(it.latitude, it.longitude)
+                myMap?.moveCamera(CameraUpdateFactory.newLatLng(latLng))
+                myMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, CURRENT_ZOOM))
+            }
+        }
+    }
 
 }

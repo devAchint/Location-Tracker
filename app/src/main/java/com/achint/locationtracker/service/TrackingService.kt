@@ -1,6 +1,7 @@
 package com.achint.locationtracker.service
 
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.app.PendingIntent
 import android.content.Intent
 import android.location.Location
@@ -126,10 +127,12 @@ class TrackingService : LifecycleService() {
         }
 
         val notification = NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentTitle("Tracking your location")
             .setContentText("Location tracking is active. Tap here for more information.")
             .setSmallIcon(R.drawable.ic_location)
-            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setDefaults(Notification.DEFAULT_ALL)
             .setOngoing(true)
             .setContentIntent(getPendingIntent())
             .build()

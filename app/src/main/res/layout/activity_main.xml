@@ -10,6 +10,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/main"
         android:layout_width="match_parent"
+        android:background="@color/white"
         android:layout_height="match_parent"
         tools:context=".MainActivity">
 
@@ -20,16 +21,20 @@
             android:layout_height="0dp"
             app:layout_constraintBottom_toTopOf="@id/startTracking"
             app:layout_constraintTop_toTopOf="parent"
+            android:layout_marginBottom="16dp"
             tools:context="com.example.mapwithmarker.MapsMarkerActivity" />
 
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/startTracking"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="50dp"
             android:layout_marginStart="4dp"
+            android:layout_margin="16dp"
             android:text="Start Tracking"
+            android:background="@drawable/enable_button_bg"
             android:textAllCaps="false"
-            android:textStyle="bold"
+            android:textColor="@color/white"
+            android:textSize="18sp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent" />

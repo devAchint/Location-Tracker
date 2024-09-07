@@ -2,7 +2,6 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.jetbrains.kotlin.kapt)
-    alias(libs.plugins.dagger.hilt.android)
     alias(libs.plugins.navigation.safeargs)
     alias(libs.plugins.google.maps.secrets)
 }
@@ -59,10 +58,6 @@ dependencies {
     implementation(libs.play.services.location)
     implementation(libs.play.services.maps)
 
-    //hilt
-    implementation(libs.hilt.android)
-    kapt(libs.hilt.compiler)
-
     //timber
     implementation(libs.timber)
 
@@ -70,8 +65,6 @@ dependencies {
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
 
-    //datastore preferences
-    implementation (libs.androidx.datastore.preferences)
 }
 kapt {
     correctErrorTypes = true

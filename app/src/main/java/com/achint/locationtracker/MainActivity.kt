@@ -4,7 +4,6 @@ import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -31,6 +30,7 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CircleOptions
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.gms.maps.model.PolylineOptions
 
@@ -42,9 +42,7 @@ class MainActivity : AppCompatActivity() {
             ActivityResultContracts.RequestMultiplePermissions()
         ) { permissions ->
             if (!permissions.containsValue(false)) {
-                Toast.makeText(this, "lcation1", Toast.LENGTH_SHORT).show()
                 loadMap()
-
             } else {
                 val anyRationaleNeeded = PermissionManager.locationPermissions.any { permission ->
                     ActivityCompat.shouldShowRequestPermissionRationale(this, permission)
@@ -84,26 +82,30 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
-        checkLocationPermissions()
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this)
         setOnClickListeners()
         trackingObservers()
+        checkLocationPermissions()
     }
 
     private fun loadMap() {
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as? SupportMapFragment
         mapFragment?.getMapAsync { googleMap ->
             myMap = googleMap
-            myMap?.isMyLocationEnabled = true
-            myMap?.uiSettings?.isMyLocationButtonEnabled = true
-            addAllLines()
-            objectLocation?.let {
-                addCircle(it)
+            myMap?.let {
+                it.isMyLocationEnabled = true
+                it.uiSettings.isMyLocationButtonEnabled = true
+                objectLocation?.let {
+                    addFencing(it)
+                }
+                addAllLines()
+                getLastLocation()
             }
-            getLastLocation()
+
         }
     }
+
 
     private fun setOnClickListeners() {
         binding.startTracking.setOnClickListener {
@@ -130,24 +132,23 @@ class MainActivity : AppCompatActivity() {
                 binding.startTracking.text = getString(R.string.stop_tracking)
             } else {
                 binding.startTracking.text = getString(R.string.start_tracking)
-                getLastLocation()
                 binding.alertLayout.visibility = View.GONE
+                myMap?.clear()
+                getLastLocation()
             }
         }
 
         TrackingService.objectLocation.observe(this) {
             objectLocation = it
             it?.let {
-                addCircle(it)
-            } ?: kotlin.run {
-                myMap?.clear()
+                addFencing(it)
             }
         }
 
         TrackingService.pathPoints.observe(this) {
             this.pathPoints = it
             updatePolyLine()
-            moveToCamera()
+            moveCameraToCurrentPosition()
         }
         GeoFencingReceiver.isObjectUnderRadius.observe(this) {
             if (it) {
@@ -165,6 +166,7 @@ class MainActivity : AppCompatActivity() {
             .color(POLYLINE_COLOR)
             .width(POLYLINE_WIDTH)
             .addAll(pathPoints)
+
         myMap?.addPolyline(polylineOptions)
     }
 
@@ -175,7 +177,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun moveToCamera() {
+    private fun moveCameraToCurrentPosition() {
         if (pathPoints.isNotEmpty() && pathPoints.size > 1) {
             myMap?.moveCamera(CameraUpdateFactory.newLatLng(pathPoints.last()))
             myMap?.animateCamera(
@@ -205,14 +207,13 @@ class MainActivity : AppCompatActivity() {
         if (PermissionManager.hasLocationPermissions(this).not()) {
             locationPermissionLauncher.launch(PermissionManager.locationPermissions)
         } else {
-            Toast.makeText(this, "location", Toast.LENGTH_SHORT).show()
             loadMap()
         }
     }
 
 
-    private fun addCircle(latLng: LatLng) {
-        val marker = MarkerOptions().position(latLng).title("Object location").icon(
+    private fun addFencing(latLng: LatLng) {
+        val markerOptions = MarkerOptions().position(latLng).title("Object location").icon(
             BitmapDescriptorFactory.defaultMarker(MARKER_COLOR)
         )
         val circle = CircleOptions()
@@ -222,7 +223,7 @@ class MainActivity : AppCompatActivity() {
             .strokeColor(GEOFENCE_STROKE_COLOR)
         myMap?.let {
             it.clear()
-            it.addMarker(marker)
+            it.addMarker(markerOptions)
             it.addCircle(circle)
             it.moveCamera(CameraUpdateFactory.newLatLng(latLng))
             it.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng, TRACKING_ZOOM))
@@ -268,7 +269,4 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-    }
 }

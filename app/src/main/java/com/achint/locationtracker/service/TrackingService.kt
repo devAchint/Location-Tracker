@@ -2,13 +2,10 @@ package com.achint.locationtracker.service
 
 import android.annotation.SuppressLint
 import android.app.Notification
-import android.app.NotificationManager
 import android.app.PendingIntent
-import android.content.Context
 import android.content.Intent
 import android.location.Location
 import android.os.Looper
-import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.MutableLiveData
@@ -16,7 +13,6 @@ import com.achint.locationtracker.MainActivity
 import com.achint.locationtracker.R
 import com.achint.locationtracker.utils.Constants.ACTION_START_TRACKING
 import com.achint.locationtracker.utils.Constants.ACTION_STOP_TRACKING
-import com.achint.locationtracker.utils.Constants.ALERT_NOTIFICATION_ID
 import com.achint.locationtracker.utils.Constants.NOTIFICATION_CHANNEL_ID
 import com.achint.locationtracker.utils.Constants.NOTIFICATION_ID
 import com.achint.locationtracker.utils.Constants.TRACKING_NOTIFICATION_PENDING_INTENT_REQUEST_CODE
@@ -168,7 +164,7 @@ class TrackingService : LifecycleService() {
         }
     }
 
-    private fun removeGeoFenceClient(){
+    private fun removeGeoFenceClient() {
         geoFencingClient.removeGeofences(geoFenceUtils.geofencePendingIntent).run {
             addOnSuccessListener {
                 Timber.d("Geofence removed successfully.")

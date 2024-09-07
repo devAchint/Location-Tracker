@@ -16,7 +16,7 @@ import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingEvent
 import timber.log.Timber
 
-class GeoFencingReceiver() : BroadcastReceiver() {
+class GeoFencingReceiver : BroadcastReceiver() {
     companion object {
         var isObjectUnderRadius = MutableLiveData<Boolean>()
     }
